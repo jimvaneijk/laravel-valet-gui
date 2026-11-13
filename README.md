@@ -4,6 +4,16 @@
 
 A small macOS desktop app for [Laravel Valet](https://laravel.com/docs/valet), so you don't need the terminal for everyday tasks.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/sites-dark.png">
+  <img src="docs/sites-light.png" alt="Sites overview with HTTPS toggles and per-site PHP versions">
+</picture>
+
+<p>
+  <img src="docs/proxies.png" width="49%" alt="Proxies">
+  <img src="docs/services.png" width="49%" alt="Services and global PHP version">
+</p>
+
 - See all parked and linked sites, search and filter them
 - Toggle HTTPS per site, pick a PHP version per site (`isolate`)
 - Link and park folders with a folder picker, forget parked paths
