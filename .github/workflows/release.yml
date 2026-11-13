@@ -19,7 +19,13 @@ jobs:
       - run: npm ci
       # The tag is the source of truth for the version: push v1.2.3 to release 1.2.3.
       - run: npm pkg set version="${GITHUB_REF_NAME#v}"
-      - run: npm run release
+      # Unset secrets that aren't configured: electron-builder treats an empty CSC_LINK as a path.
+      - run: |
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            [ -z "${!v}" ] && unset "$v"
+          done
+          [ -z "$CSC_LINK" ] && export CSC_IDENTITY_AUTO_DISCOVERY=false
+          npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Optional: add these repo secrets to sign + notarize (needed for silent auto-updates).
