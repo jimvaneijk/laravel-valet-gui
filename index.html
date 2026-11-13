@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<title>Valet</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff; --fg: #1d1d1f; --muted: #86868b; --line: #ececf0; --hover: #f5f5f8;
+    --side: rgba(246, 246, 250, .6); --field: #f2f2f6;
+    --accent: #6b4fd8; --accent-soft: rgba(107, 79, 216, .12); --danger: #e5484d; --ok: #30a46c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1e1e21; --fg: #f2f2f7; --muted: #8e8e93; --line: #2f2f34; --hover: #26262a;
+      --side: rgba(30, 30, 34, .55); --field: #2a2a2f; --accent: #9a84ff; --accent-soft: rgba(154, 132, 255, .16); }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; font: 13px/1.4 -apple-system, system-ui, sans-serif; color: var(--fg); display: flex; background: transparent; -webkit-user-select: none; }
+  code, .mono { font: 12px ui-monospace, SFMono-Regular, monospace; }
+
+  /* Sidebar */
+  aside { width: 210px; flex: none; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 52px 10px 12px; -webkit-app-region: drag; }
+  aside .logo { padding: 0 8px 18px; }
+  aside .logo img { height: 20px; display: block; }
+  aside nav { display: flex; flex-direction: column; gap: 2px; -webkit-app-region: no-drag; }
+  aside nav button { all: unset; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; cursor: default; }
+  aside nav button:hover { background: var(--accent-soft); }
+  aside nav button.active { background: var(--accent); color: #fff; }
+  aside nav button .count { margin-left: auto; font-size: 11px; color: var(--muted); }
+  aside nav button.active .count { color: rgba(255,255,255,.8); }
+  aside nav svg { width: 15px; height: 15px; flex: none; }
+  aside .foot { margin-top: auto; padding: 8px; font-size: 11px; color: var(--muted); -webkit-app-region: no-drag; }
+  aside .credit { margin-top: 4px; }
+  aside .update { display: block; margin-bottom: 8px; padding: 6px 8px; border-radius: 7px; background: var(--accent-soft); color: var(--accent); font-weight: 500; cursor: pointer; }
+  aside .update[hidden] { display: none; }
+  aside .credit a { color: var(--accent); cursor: pointer; }
+  aside .credit a:hover { text-decoration: underline; }
+
+  /* Main */
+  main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
+  .toolbar { height: 52px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 20px; border-bottom: 1px solid var(--line); -webkit-app-region: drag; }
+  .toolbar h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .toolbar > *:not(h2) { -webkit-app-region: no-drag; }
+  .spacer { flex: 1; }
+  .content { flex: 1; overflow: auto; padding: 16px 20px 24px; }
+  section[hidden] { display: none; }
+
+  button, select, input { font: inherit; color: var(--fg); }
+  .btn { border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 5px 11px; cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); padding: 4px 8px; }
+  .btn.ghost:hover { background: var(--hover); color: var(--fg); }
+  .btn.ghost.danger:hover { color: var(--danger); }
+  button:disabled, select:disabled, input:disabled { opacity: .5; pointer-events: none; }
+  select, input[type=text], input[type=search] { background: var(--field); border: 1px solid transparent; border-radius: 7px; padding: 5px 9px; outline: none; }
+  select:focus, input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input[type=search] { width: 240px; }
+
+  .chips { display: flex; gap: 6px; margin-bottom: 12px; }
+  .chip { border: 1px solid var(--line); background: transparent; border-radius: 99px; padding: 3px 11px; cursor: pointer; color: var(--muted); }
+  .chip.active { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 500; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:hover td { background: var(--hover); }
+  td.actions { text-align: right; white-space: nowrap; width: 1%; }
+  td.actions .btn { opacity: 0; }
+  tr:hover td.actions .btn, td.actions .btn:focus { opacity: 1; }
+  .site { font-weight: 500; }
+  .site a { color: inherit; cursor: pointer; text-decoration: none; }
+  .site a:hover { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 420px; }
+  .tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; padding: 1px 5px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; vertical-align: 1px; }
+  .empty { text-align: center; color: var(--muted); padding: 48px 0; }
+
+  /* Switch */
+  .switch { appearance: none; width: 32px; height: 19px; border-radius: 99px; background: var(--line); position: relative; cursor: pointer; transition: background .15s; vertical-align: middle; margin: 0; }
+  .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.3); transition: transform .15s; }
+  .switch:checked { background: var(--ok); }
+  .switch:checked::after { transform: translateX(13px); }
+
+  /* Cards (services) */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .card h3 { margin: 0 0 4px; font-size: 13px; }
+  .card p { margin: 0 0 12px; color: var(--muted); }
+  .card .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  form.inline { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+
+  /* Console + toast + spinner */
+  details#console { flex: none; border-top: 1px solid var(--line); }
+  details#console summary { padding: 6px 20px; color: var(--muted); font-size: 11px; cursor: pointer; list-style: none; }
+  details#console summary::before { content: '▸ '; }
+  details#console[open] summary::before { content: '▾ '; }
+  #log { margin: 0; height: 150px; overflow: auto; padding: 4px 20px 10px; color: var(--muted); white-space: pre-wrap; -webkit-user-select: text; }
+  #toast { position: fixed; bottom: 18px; left: 50%; transform: translate(-50%, 20px); opacity: 0; transition: .2s; background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.2); pointer-events: none; max-width: 70%; }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.err { background: var(--danger); color: #fff; }
+  #busy { display: none; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+  #busy.on { display: flex; }
+  #busy::before { content: ''; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<aside>
+  <div class="logo"><img src="assets/logo.svg" alt="Laravel Valet"></div>
+  <nav>
+    <button data-tab="sites" class="active">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.25"/><path d="M1.75 8h12.5M8 1.75c1.8 2 1.8 10.5 0 12.5M8 1.75c-1.8 2-1.8 10.5 0 12.5"/></svg>
+      Sites <span class="count" id="nSites"></span></button>
+    <button data-tab="paths">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.75 4.25v8.5h12.5v-7H8L6.5 3.75H1.75z"/></svg>
+      Parked paths <span class="count" id="nPaths"></span></button>
+    <button data-tab="proxies">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h9.5M9 2.5 11.5 5 9 7.5M14 11H4.5M7 8.5 4.5 11 7 13.5"/></svg>
+      Proxies <span class="count" id="nProxies"></span></button>
+    <button data-tab="services">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.25"/><path d="M8 1.75v2M8 12.25v2M1.75 8h2M12.25 8h2M3.6 3.6 5 5M11 11l1.4 1.4M3.6 12.4 5 11M11 5l1.4-1.4"/></svg>
+      Services</button>
+  </nav>
+  <div class="foot">
+    <a id="update" class="update" hidden onclick="api.openUrl('https://github.com/jimvaneijk/laravel-valet-gui/releases/latest')"></a>
+    <div id="foot"></div>
+    <div class="credit">Gemaakt door <a onclick="api.openUrl('https://github.com/jimvaneijk')">Jim van Eijk</a></div></div>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <h2 id="title">Sites</h2>
+    <div class="spacer"></div>
+    <div id="busy"></div>
+    <span id="tools-sites"><input type="search" id="filter" placeholder="Zoek op naam of pad…" oninput="renderSites()"></span>
+    <button class="btn" onclick="refresh()" title="Vernieuwen (⌘R)">↻</button>
+    <button class="btn primary" id="primary"></button>
+  </div>
+
+  <div class="content">
+    <section id="sites">
+      <div class="chips" id="chips">
+        <button class="chip active" data-f="all">Alle</button>
+        <button class="chip" data-f="linked">Links</button>
+        <button class="chip" data-f="parked">Geparkeerd</button>
+        <button class="chip" data-f="ssl">HTTPS</button>
+      </div>
+      <table><thead><tr><th>Site</th><th>HTTPS</th><th>PHP</th><th></th></tr></thead><tbody id="siteRows"></tbody></table>
+    </section>
+
+    <section id="paths" hidden>
+      <table><thead><tr><th>Map</th><th></th></tr></thead><tbody id="pathRows"></tbody></table>
+    </section>
+
+    <section id="proxies" hidden>
+      <form class="inline" onsubmit="addProxy(event)">
+        <input type="text" name="name" placeholder="naam, bv. mailpit" required>
+        <input type="text" name="host" placeholder="http://127.0.0.1:8025" required size="26">
+        <label><input type="checkbox" name="secure" class="switch"> HTTPS</label>
+        <button class="btn">Toevoegen</button>
+      </form>
+      <table><thead><tr><th>Site</th><th>Doel</th><th>HTTPS</th><th></th></tr></thead><tbody id="proxyRows"></tbody></table>
+    </section>
+
+    <section id="services" hidden>
+      <div class="cards">
+        <div class="card">
+          <h3>Services</h3>
+          <p>Nginx, PHP-FPM en DnsMasq.</p>
+          <div class="row">
+            <button class="btn" onclick="act(['start'])">Start</button>
+            <button class="btn" onclick="act(['restart'])">Herstart</button>
+            <button class="btn" onclick="act(['stop'])">Stop</button>
+            <button class="btn ghost" onclick="act(['status'], { refresh: false, console: true })">Status tonen</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Globale PHP-versie</h3>
+          <p>Voor alle sites zonder eigen versie.</p>
+          <div class="row">
+            <select id="globalPhp"></select>
+            <button class="btn" onclick="act(['use', $('globalPhp').value])">Gebruik</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Zonder wachtwoord werken</h3>
+          <p>Draai één keer in je terminal om de wachtwoordprompt bij elke actie over te slaan:</p>
+          <code>valet trust</code>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <details id="console"><summary>Console</summary><pre id="log" class="mono"></pre></details>
+</main>
+<div id="toast"></div>
+
+<script>
+let state = { sites: [], paths: [], proxies: [], phps: [], tld: 'test', home: '' };
+let tab = 'sites', siteFilter = 'all';
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const short = p => state.home && p.startsWith(state.home) ? '~' + p.slice(state.home.length) : p;
+const log = msg => { $('log').textContent += msg.trim() + '\n'; $('log').scrollTop = 1e9; };
+const clean = e => e.message.replace(/^Error invoking remote method '\w+': (Error: )?/, '').trim();
+
+let toastTimer;
+function toast(msg, err) {
+  const t = $('toast');
+  t.textContent = msg; t.className = 'show' + (err ? ' err' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = '', err ? 5000 : 2500);
+}
+
+const tabs = {
+  sites:    { title: 'Sites',        primary: ['+ Map linken',   linkFolder] },
+  paths:    { title: 'Parked paths', primary: ['+ Map parkeren', parkFolder] },
+  proxies:  { title: 'Proxies' },
+  services: { title: 'Services' },
+};
+function show(name) {
+  tab = name;
+  document.querySelectorAll('aside nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  document.querySelectorAll('.content section').forEach(s => s.hidden = s.id !== name);
+  $('title').textContent = tabs[name].title;
+  $('tools-sites').hidden = name !== 'sites';
+  const p = tabs[name].primary;
+  $('primary').hidden = !p;
+  if (p) { $('primary').textContent = p[0]; $('primary').onclick = p[1]; }
+}
+document.querySelectorAll('aside nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
+document.querySelectorAll('#chips .chip').forEach(c => c.onclick = () => {
+  siteFilter = c.dataset.f;
+  document.querySelectorAll('#chips .chip').forEach(x => x.classList.toggle('active', x === c));
+  renderSites();
+});
+document.addEventListener('keydown', e => {
+  if (e.metaKey && e.key === 'r') { e.preventDefault(); refresh(); }
+  if (e.metaKey && e.key === 'f') { e.preventDefault(); show('sites'); $('filter').focus(); }
+});
+
+async function busy(label, fn) {
+  $('busy').textContent = label; $('busy').classList.add('on');
+  const els = document.querySelectorAll('main button, main select, main input');
+  els.forEach(b => b.disabled = true);
+  try { return await fn(); }
+  finally { $('busy').classList.remove('on'); els.forEach(b => b.disabled = false); }
+}
+
+async function act(args, { cwd, refresh: re = true, console: open = false } = {}) {
+  log('$ valet ' + args.join(' '));
+  try {
+    const out = await busy('valet ' + args[0] + '…', () => api.valet(args, { cwd, admin: true }));
+    if (out) log(out);
+    if (open) $('console').open = true;
+    else toast((out || '').trim().split('\n').pop() || 'Klaar');
+  } catch (e) {
+    log('✗ ' + clean(e));
+    toast(clean(e).split('\n').pop(), true);
+  }
+  if (re) await refresh();
+}
+
+async function refresh() {
+  try { state = await busy('Laden…', api.data); }
+  catch (e) { log('✗ ' + clean(e)); toast(clean(e), true); return; }
+  $('nSites').textContent = state.sites.length;
+  $('nPaths').textContent = state.paths.length;
+  $('nProxies').textContent = state.proxies.length || '';
+  $('foot').textContent = `.${state.tld} · ${state.phps.length} PHP-versies`;
+  renderSites();
+  $('pathRows').innerHTML = state.paths.map((p, i) => `<tr>
+    <td><div class="site">${esc(p.split('/').pop())}</div><div class="sub mono">${esc(short(p))}</div></td>
+    <td class="actions">
+      <button class="btn ghost" onclick="api.reveal(state.paths[${i}])">Toon in Finder</button>
+      <button class="btn ghost danger" onclick="act(['forget', state.paths[${i}]])">Vergeten</button></td></tr>`).join('')
+    || '<tr><td colspan="2" class="empty">Nog geen geparkeerde mappen.</td></tr>';
+  $('proxyRows').innerHTML = state.proxies.map((p, i) => `<tr>
+    <td class="site"><a onclick="api.openUrl(state.proxies[${i}].url)">${esc(p.name)}.${esc(state.tld)}</a></td>
+    <td class="sub mono">${esc(p.host)}</td>
+    <td><input type="checkbox" class="switch" disabled ${p.ssl ? 'checked' : ''}></td>
+    <td class="actions"><button class="btn ghost danger" onclick="act(['unproxy', state.proxies[${i}].name])">Verwijderen</button></td></tr>`).join('')
+    || '<tr><td colspan="4" class="empty">Nog geen proxies. Handig voor Docker, Mailpit, Vite…</td></tr>';
+  $('globalPhp').innerHTML = state.phps.map(v => `<option value="${esc(v)}" ${v === state.globalPhp ? 'selected' : ''}>${esc(v.replace('php@', 'PHP '))}</option>`).join('');
+}
+
+function renderSites() {
+  const q = $('filter').value.toLowerCase();
+  const phpOpts = cur => state.phps.map(v => `<option ${v === cur ? 'selected' : ''}>${esc(v.replace('php@', 'PHP '))}</option>`).join('');
+  const rows = state.sites.map((s, i) => [s, i]).filter(([s]) =>
+    (siteFilter === 'all' || (siteFilter === 'linked' && s.linked) || (siteFilter === 'parked' && !s.linked) || (siteFilter === 'ssl' && s.ssl)) &&
+    (!q || s.name.toLowerCase().includes(q) || s.path.toLowerCase().includes(q)));
+  $('siteRows').innerHTML = rows.map(([s, i]) => `<tr>
+      <td><div class="site"><a onclick="api.openUrl(state.sites[${i}].url)">${esc(s.name)}.${esc(state.tld)}</a>${s.linked ? '<span class="tag">link</span>' : ''}</div>
+        <div class="sub mono" title="${esc(s.path)}">${esc(short(s.path))}</div></td>
+      <td><input type="checkbox" class="switch" ${s.ssl ? 'checked' : ''} title="${s.ssl ? 'HTTPS uitzetten' : 'HTTPS aanzetten'}"
+        onchange="act([this.checked ? 'secure' : 'unsecure', state.sites[${i}].name])"></td>
+      <td><select onchange="act(['isolate', state.phps[this.selectedIndex], '--site=' + state.sites[${i}].name])">${phpOpts(s.php)}</select></td>
+      <td class="actions">
+        <button class="btn ghost" onclick="api.openUrl(state.sites[${i}].url)">Open ↗</button>
+        <button class="btn ghost" onclick="api.reveal(state.sites[${i}].path)">Finder</button>
+        ${s.linked ? `<button class="btn ghost danger" onclick="act(['unlink', state.sites[${i}].name])">Unlink</button>` : ''}
+      </td></tr>`).join('')
+    || `<tr><td colspan="4" class="empty">${q || siteFilter !== 'all' ? 'Geen sites gevonden.' : 'Nog geen sites. Link of parkeer een map.'}</td></tr>`;
+}
+
+async function linkFolder() {
+  const dir = await api.pickFolder();
+  if (dir) act(['link', dir.split('/').pop().toLowerCase().replace(/[^a-z0-9-]+/g, '-')], { cwd: dir });
+}
+async function parkFolder() {
+  const dir = await api.pickFolder();
+  if (dir) act(['park', dir]);
+}
+function addProxy(e) {
+  e.preventDefault();
+  const f = e.target;
+  act(['proxy', f.name.value.trim(), f.host.value.trim(), ...(f.secure.checked ? ['--secure'] : [])]);
+  f.reset();
+}
+
+api.onUpdate(v => { $('update').textContent = `↓ Versie ${v} beschikbaar`; $('update').hidden = false; });
+
+show('sites');
+refresh();
+</script>
+</body>
+</html>
